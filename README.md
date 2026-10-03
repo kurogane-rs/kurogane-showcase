@@ -2,7 +2,7 @@
 
 **A Rust app that owns its window and its loop, with Chromium as one participant in the frame, never the owner.**
 
-The centre of the window is a wgpu compute galaxy of up to 2.5 million stars. Around it sit three live Chromium panes, each a real web page: one steers the galaxy, one plots what it is doing and one shows what the loop reports. Everything runs on one thread, in one winit event loop, and Chromium is pumped only when it asks to be.
+The centre of the window is a wgpu compute galaxy of millions of stars, as many as the GPU's memory holds. Around it sit three live Chromium panes, each a real web page: one steers the galaxy, one plots what it is doing and one shows what the loop reports. Everything runs on one thread, in one winit event loop, and Chromium is pumped only when it asks to be.
 
 Press **E** to pull the window apart and see which part is which.
 
@@ -103,6 +103,64 @@ Dragging the Stars slider:
 
 1. `panes/controls.html` calls `kurogane.invoke('sim.set', params)`, at most once per animation frame.
 2. The call crosses from the renderer process to the browser process. During the next pump, the `sim.set` closure writes the new params into `Shared`.
-3. The loop's next `frame()` steps the layout springs, places the panes, then runs the wgpu compute step with the new star count (capped at `MAX_STARS`) and draws.
+3. The loop's next `frame()` steps the layout springs, places the panes, then runs the wgpu compute step with the new star count (adding star buffers until GPU memory is full) and draws.
 4. The histograms come back from the GPU a frame or two later through a mapped buffer, so the frame never stalls.
 5. The loop sends them, with the frame's costs, on the `telemetry` stream to `panes/charts.html`, which plots them.
+
+## Benchmarking
+
+The showcase can measure itself: each frame's CPU stages as tracing spans, and each GPU pass with timestamp queries. A benchmark steers the scene the same way on every run, so a run before a change can be compared with one after it. Its switches go after `--`; Chromium ignores them.
+
+```bash
+# Step the stars up by √2 from 65,536 until GPU memory is full (about 95 s)
+kurogane run --release -- --bench=baseline
+
+# Replay perf/drag.input.json: drags across the whole range, bursts, a pull-apart, a bigger star size (about 40 s)
+kurogane run --release -- --bench=baseline-drag --replay=drag
+```
+
+While a benchmark runs it ignores the controls, and it closes the window when it is done. It prints a table and writes to `perf/`:
+
+| File | What it holds |
+|---|---|
+| `perf/<name>.json` | The summary: for each star count, frame rate and frame-time percentiles, the loop's CPU stages and the GPU passes |
+| `perf/<name>.jsonl` | The trace, one JSON line each: a `frame` record per frame, a `gpu` record per timed frame, and Kurogane's, wgpu's and egui's own log lines among them |
+| `perf/<name>.input.json` | A recording to replay |
+
+### After a change
+
+Run the same benchmark under a new name. It prints its own numbers, then the change from the baseline:
+
+```bash
+kurogane run --release -- --bench=one-triangle                     # against baseline
+kurogane run --release -- --bench=one-triangle-drag --replay=drag  # against baseline-drag
+kurogane run --release -- --compare=baseline,one-triangle          # any two runs, no window
+```
+
+`--against=<name>` compares with a run other than the baseline.
+
+### Your own session
+
+```bash
+kurogane run --release -- --record=mine    # use the controls, then close the window
+kurogane run --release -- --bench=baseline-mine --replay=mine
+kurogane run --release -- --trace=session  # trace an ordinary session, without a benchmark
+```
+
+### Reading the table
+
+| Column | Meaning |
+|---|---|
+| secs | How long the run stayed at that star count; a replay lists the counts it stayed at for a second or more |
+| fps, on time | Frames a second, and the share of frames within 1.25 refresh periods |
+| frame p95, worst | Milliseconds between frames: the 95th percentile and the slowest |
+| cpu | The loop's own work in a frame, without waiting on the GPU |
+| pump | Chromium's pumps between frames |
+| wait | Waiting for the surface's next texture: long when the GPU is behind |
+| gpu, compute, draw | GPU milliseconds a frame: every pass, the simulation, and the stars drawn |
+
+- Compare release builds with release builds. A debug build mostly measures unoptimised Rust and wgpu's validation.
+- Keep the window the same size, and close other GPU-heavy apps. How many stars fit depends on the GPU memory everything else is using.
+- Below about a million stars the GPU lowers its clocks, so its timings there are noisy.
+
+The HUD over the galaxy shows the GPU timings live as well.

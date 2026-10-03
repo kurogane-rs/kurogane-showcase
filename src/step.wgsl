@@ -1,5 +1,6 @@
 // The galaxy has stars orbiting a central mass. `step` updates them each frame;
-// `seed` creates their initial positions.
+// `seed` creates their initial positions. Each dispatch covers one buffer of
+// the galaxy's stars.
 
 struct Star {
     pos: vec4<f32>,
@@ -13,8 +14,13 @@ struct Sim {
     turbulence: f32,
     time: f32,
     burst: f32,
-    count: u32,
     seed: u32,
+};
+
+// Which of the galaxy's stars this buffer holds
+struct Chunk {
+    first: u32,
+    count: u32,
 };
 
 const BINS: u32 = 64u;
@@ -24,6 +30,7 @@ const SPEED_RANGE: f32 = 2.5;
 @group(0) @binding(0) var<uniform> sim: Sim;
 @group(0) @binding(1) var<storage, read_write> stars: array<Star>;
 @group(0) @binding(2) var<storage, read_write> bins: array<atomic<u32>>;
+@group(0) @binding(3) var<uniform> chunk: Chunk;
 
 var<workgroup> local_bins: array<atomic<u32>, 128>;
 
@@ -76,7 +83,7 @@ fn seed(@builtin(global_invocation_id) id: vec3<u32>) {
     if (i >= arrayLength(&stars)) {
         return;
     }
-    stars[i] = spawn(i, sim.seed, 0.12, 5.6);
+    stars[i] = spawn(chunk.first + i, sim.seed, 0.12, 5.6);
 }
 
 @compute @workgroup_size(256)
@@ -90,7 +97,7 @@ fn step(
     workgroupBarrier();
 
     let i = id.x;
-    if (i < sim.count) {
+    if (i < chunk.count) {
         var star = stars[i];
         let r = star.pos.xyz;
         let d2 = dot(r, r) + 0.02;
@@ -111,7 +118,7 @@ fn step(
         let nd = length(next);
         if (nd < 0.06 || nd > 9.0) {
             // Swallowed by the centre, or flung out: born again at the rim
-            star = spawn(i, sim.seed, 2.6, 5.4);
+            star = spawn(chunk.first + i, sim.seed, 2.6, 5.4);
             v = star.vel.xyz;
         } else {
             star.pos = vec4<f32>(next, 1.0);

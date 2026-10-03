@@ -90,10 +90,11 @@
 <script>
 'use strict';
 
-// Each knob: how it maps onto the galaxy's parameter, and how it reads
+// Each knob: how it maps onto the galaxy's parameter, and how it reads.
+// Stars go up to 2^30, Rust's limit; GPU memory usually runs out first
 const KNOBS = [
-  { key: 'count', label: 'Stars', min: 16, max: 21.25, step: 0.25,
-    from: v => v >= 21.25 ? 2_500_000 : Math.round(2 ** v), to: c => Math.log2(c), show: c => c.toLocaleString('en-US') },
+  { key: 'count', label: 'Stars', min: 16, max: 30, step: 0.25,
+    from: v => Math.round(2 ** v), to: c => Math.log2(c), show: c => c.toLocaleString('en-US') },
   { key: 'gravity', label: 'Gravity', min: 0.2, max: 3, step: 0.01, show: v => v.toFixed(2) },
   { key: 'swirl', label: 'Swirl', min: -1, max: 1.5, step: 0.01, show: v => v.toFixed(2) },
   { key: 'turbulence', label: 'Turbulence', min: 0, max: 0.8, step: 0.01, show: v => v.toFixed(2) },

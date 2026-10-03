@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 
 use egui::{Align2, Color32, FontId, Painter, Pos2, Stroke, StrokeKind, pos2, vec2};
 
+use crate::gpu_timer::GpuTimes;
 use crate::layout::{Layout, Rect, TILES, Tile};
 
 const INK: Color32 = Color32::from_rgb(222, 226, 235);
@@ -75,6 +76,8 @@ pub struct Hud<'a> {
     pub adapter: &'a str,
     /// 0 docked, 1 pulled apart, in between while moving
     pub apart: f32,
+    /// The GPU's recent frames, when it can time its passes
+    pub gpu: Option<GpuTimes>,
 }
 
 pub fn draw(painter: &Painter, layout: &Layout, hud: &Hud, wires: &Wires) {
@@ -296,6 +299,18 @@ fn scene_overlay(painter: &Painter, r: Rect, hud: &Hud) {
         FontId::proportional(11.5),
         MUTED,
     );
+    if let Some(gpu) = hud.gpu {
+        painter.text(
+            scene.left_top() + vec2(14.0, 48.0),
+            Align2::LEFT_TOP,
+            format!(
+                "GPU {:.2} ms a frame: compute {:.2}, stars {:.2}, chrome {:.2}",
+                gpu.total, gpu.compute, gpu.draw, gpu.chrome
+            ),
+            FontId::proportional(11.5),
+            GPU,
+        );
+    }
     budget_chart(painter, scene.left_bottom() + vec2(14.0, -14.0), hud.budget);
 }
 
@@ -400,7 +415,7 @@ fn label(painter: &Painter, tile: Tile, r: Rect, apart: f32) {
     );
 }
 
-fn group_thousands(n: u32) -> String {
+pub fn group_thousands(n: u32) -> String {
     let digits = n.to_string();
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {
