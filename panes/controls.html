@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Controls</title>
+<link rel="stylesheet" href="pane.css">
+<style>
+  .knobs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 16px 10px;
+  }
+  .knob { padding: 9px 0 7px; }
+  .knob label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .knob output { color: var(--chromium); font-weight: 600; }
+  input[type="range"] {
+    width: 100%;
+    height: 18px;
+    margin: 0;
+    background: transparent;
+    appearance: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--chromium) var(--fill, 50%), var(--line) var(--fill, 50%));
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+    background: var(--ink);
+    appearance: none;
+  }
+  #hue::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, hsl(0 80% 60%), hsl(60 80% 60%), hsl(120 80% 55%), hsl(180 80% 55%), hsl(240 80% 65%), hsl(300 80% 60%), hsl(360 80% 60%));
+  }
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+  }
+  .actions button { display: flex; justify-content: center; gap: 8px; align-items: center; }
+  .latency {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: end;
+    gap: 2px 12px;
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--line);
+  }
+  .latency strong {
+    grid-row: span 2;
+    color: var(--chromium);
+    font-size: 30px;
+    font-weight: 300;
+    line-height: 1;
+  }
+  .latency span { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Steer the galaxy</h1>
+    <p>Every change is a command from this page to Rust.</p>
+  </header>
+
+  <div class="knobs" id="knobs"></div>
+
+  <div class="actions">
+    <button id="burst" type="button">Burst <kbd>Space</kbd></button>
+    <button id="apart" type="button">Pull apart <kbd>E</kbd></button>
+  </div>
+
+  <div class="latency" aria-live="off">
+    <strong id="rtt">-</strong>
+    <span>Round trip to Rust and back, median of the last 60</span>
+    <span id="rtt-last">No command sent yet</span>
+  </div>
+
+<script>
+'use strict';
+
+// Each knob: how it maps onto the galaxy's parameter, and how it reads
+const KNOBS = [
+  { key: 'count', label: 'Stars', min: 16, max: 21.25, step: 0.25,
+    from: v => v >= 21.25 ? 2_500_000 : Math.round(2 ** v), to: c => Math.log2(c), show: c => c.toLocaleString('en-US') },
+  { key: 'gravity', label: 'Gravity', min: 0.2, max: 3, step: 0.01, show: v => v.toFixed(2) },
+  { key: 'swirl', label: 'Swirl', min: -1, max: 1.5, step: 0.01, show: v => v.toFixed(2) },
+  { key: 'turbulence', label: 'Turbulence', min: 0, max: 0.8, step: 0.01, show: v => v.toFixed(2) },
+  { key: 'hue', label: 'Colour', min: 0, max: 1, step: 0.005, show: v => `${Math.round(v * 360)}°` },
+  { key: 'spin', label: 'Camera spin', min: 0, max: 0.4, step: 0.005, show: v => v.toFixed(3) },
+  { key: 'size', label: 'Star size', min: 0.8, max: 4, step: 0.05, show: v => `${v.toFixed(2)} px` },
+];
+
+let params = null;
+let sendQueued = false;
+const trips = [];
+
+function fill(input) {
+  const share = (input.value - input.min) / (input.max - input.min);
+  input.style.setProperty('--fill', `${share * 100}%`);
+}
+
+function build() {
+  const knobs = document.getElementById('knobs');
+  for (const knob of KNOBS) {
+    const row = document.createElement('div');
+    row.className = 'knob';
+    const label = document.createElement('label');
+    label.htmlFor = knob.key;
+    const name = document.createElement('span');
+    name.textContent = knob.label;
+    const out = document.createElement('output');
+    label.append(name, out);
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.id = knob.key;
+    input.min = knob.min;
+    input.max = knob.max;
+    input.step = knob.step;
+    input.value = knob.to ? knob.to(params[knob.key]) : params[knob.key];
+    const update = () => {
+      const value = knob.from ? knob.from(Number(input.value)) : Number(input.value);
+      params[knob.key] = value;
+      out.textContent = knob.show(value);
+      fill(input);
+    };
+    input.addEventListener('input', () => { update(); queueSend(); });
+    update();
+    row.append(label, input);
+    knobs.append(row);
+  }
+}
+
+// At most one command a frame, carrying the latest values
+function queueSend() {
+  if (sendQueued) return;
+  sendQueued = true;
+  requestAnimationFrame(async () => {
+    sendQueued = false;
+    const started = performance.now();
+    await kurogane.invoke('sim.set', params);
+    record(performance.now() - started);
+  });
+}
+
+function record(ms) {
+  trips.push(ms);
+  if (trips.length > 60) trips.shift();
+  const sorted = [...trips].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  document.getElementById('rtt').textContent = `${median.toFixed(2)} ms`;
+  document.getElementById('rtt-last').textContent = `Last one ${ms.toFixed(2)} ms`;
+}
+
+document.getElementById('burst').addEventListener('click', () => kurogane.invoke('sim.burst'));
+document.getElementById('apart').addEventListener('click', () => kurogane.invoke('view.explode'));
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+    e.preventDefault();
+    kurogane.invoke('sim.burst');
+  }
+});
+
+(async () => {
+  params = await kurogane.invoke('sim.get');
+  build();
+  // A round trip a second, so the number is live before anything is touched
+  setInterval(async () => {
+    const started = performance.now();
+    await kurogane.invoke('sim.get');
+    record(performance.now() - started);
+  }, 1000);
+})();
+</script>
+</body>
+</html>

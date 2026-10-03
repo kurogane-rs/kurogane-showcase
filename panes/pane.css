@@ -1,0 +1,74 @@
+:root {
+  /* Chromium's own parts, scrollbars and form controls, match the dark page */
+  color-scheme: dark;
+  --bg: #0a0c12;
+  --raised: #11141c;
+  --line: #222838;
+  --ink: #dee2eb;
+  --muted: #7a8294;
+  /* The same two colours the native chrome uses */
+  --chromium: #f2b24c;
+  --gpu: #8b7bff;
+  --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Mono", "SF Mono", Consolas, ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13.5px/1.45 var(--ui);
+  font-variant-numeric: tabular-nums;
+}
+
+header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+header p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+button {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--raised);
+  color: var(--ink);
+  font: 600 13px/1 var(--ui);
+  cursor: pointer;
+}
+
+button:hover { border-color: #3a4258; }
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--chromium);
+  outline-offset: 2px;
+}
+
+kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font: 11px/1.4 var(--mono);
+}

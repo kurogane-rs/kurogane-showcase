@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Charts</title>
+<link rel="stylesheet" href="pane.css">
+<style>
+  .rate {
+    display: flex;
+    gap: 14px;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .rate b { color: var(--chromium); font-weight: 600; }
+  .charts {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1.2fr;
+    flex: 1;
+    min-height: 0;
+  }
+  figure {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+    padding: 10px 16px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  figure:last-child { border-bottom: 0; }
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  figcaption span { color: var(--muted); font-weight: 400; font-size: 12px; }
+  canvas { flex: 1; width: 100%; min-height: 0; }
+  .key { display: flex; gap: 12px; color: var(--muted); font-size: 11.5px; }
+  .key i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 2px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Telemetry</h1>
+    <p>A binary stream from the Rust loop, one message per frame.</p>
+    <div class="rate"><span><b id="rate">0</b> messages a second</span><span><b id="size">0</b> bytes each</span><span><b id="total">0</b> received</span></div>
+  </header>
+  <div class="charts">
+    <figure>
+      <figcaption>Where the stars are <span>centre to rim</span></figcaption>
+      <canvas id="radius"></canvas>
+    </figure>
+    <figure>
+      <figcaption>How fast they move <span>slow to fast</span></figcaption>
+      <canvas id="speed"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Each frame <span id="latest"></span></figcaption>
+      <canvas id="frames"></canvas>
+      <div class="key">
+        <span><i style="background:#7a8294"></i>frame</span>
+        <span><i style="background:var(--gpu)"></i>loop's work</span>
+        <span><i style="background:var(--chromium)"></i>Chromium's pump</span>
+      </div>
+    </figure>
+  </div>
+<script>
+'use strict';
+
+const BINS = 64;
+const HISTORY = 240;
+const css = getComputedStyle(document.documentElement);
+const CHROMIUM = css.getPropertyValue('--chromium').trim();
+const GPU = css.getPropertyValue('--gpu').trim();
+
+let latest = null;
+const history = [];
+let received = 0;
+let bytes = 0;
+let arrivals = [];
+
+function canvas(id) {
+  const el = document.getElementById(id);
+  const ctx = el.getContext('2d');
+  return { el, ctx };
+}
+const charts = { radius: canvas('radius'), speed: canvas('speed'), frames: canvas('frames') };
+
+function fit({ el, ctx }) {
+  const ratio = devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(el.clientWidth * ratio));
+  const h = Math.max(1, Math.round(el.clientHeight * ratio));
+  if (el.width !== w || el.height !== h) {
+    el.width = w;
+    el.height = h;
+  }
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, el.clientWidth, el.clientHeight);
+  return [el.clientWidth, el.clientHeight];
+}
+
+function bars(chart, values, colour) {
+  const [w, h] = fit(chart);
+  const { ctx } = chart;
+  const peak = Math.max(...values, 1e-6);
+  const step = w / values.length;
+  const gradient = ctx.createLinearGradient(0, h, 0, 0);
+  gradient.addColorStop(0, `${colour}33`);
+  gradient.addColorStop(1, colour);
+  ctx.fillStyle = gradient;
+  values.forEach((v, i) => {
+    const bh = (v / peak) * (h - 2);
+    ctx.fillRect(i * step + 0.5, h - bh, Math.max(1, step - 1.5), bh);
+  });
+}
+
+function lines(chart) {
+  const [w, h] = fit(chart);
+  const { ctx } = chart;
+  const top = 25; // ms at the top of the chart
+  const y = ms => h - Math.min(ms, top) / top * (h - 4);
+  ctx.strokeStyle = 'rgba(222,226,235,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(0, y(16.7));
+  ctx.lineTo(w, y(16.7));
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(122,130,148,0.9)';
+  ctx.font = '10px system-ui';
+  ctx.fillText('16.7 ms', 2, y(16.7) - 3);
+  const plot = (pick, colour) => {
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    history.forEach((f, i) => {
+      const x = (i / (HISTORY - 1)) * w;
+      if (i === 0) ctx.moveTo(x, y(pick(f))); else ctx.lineTo(x, y(pick(f)));
+    });
+    ctx.stroke();
+  };
+  plot(f => f.interval, '#7a8294');
+  plot(f => f.work, GPU);
+  plot(f => f.pump, CHROMIUM);
+}
+
+function draw() {
+  if (latest) {
+    bars(charts.radius, latest.radius, GPU);
+    bars(charts.speed, latest.speed, CHROMIUM);
+    lines(charts.frames);
+    const f = history[history.length - 1];
+    document.getElementById('latest').textContent =
+      `${f.interval.toFixed(1)} ms frame, ${f.pump.toFixed(2)} ms Chromium`;
+  }
+  const now = performance.now();
+  arrivals = arrivals.filter(t => now - t < 1000);
+  document.getElementById('rate').textContent = String(arrivals.length);
+  document.getElementById('total').textContent =
+    bytes > 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${(bytes / 1e3).toFixed(0)} KB`;
+  requestAnimationFrame(draw);
+}
+
+(async () => {
+  const stream = await kurogane.openStream('telemetry');
+  stream.onData(buffer => {
+    const v = new Float32Array(buffer);
+    latest = {
+      radius: Array.from(v.subarray(4, 4 + BINS)),
+      speed: Array.from(v.subarray(4 + BINS, 4 + 2 * BINS)),
+    };
+    history.push({ interval: v[0], pump: v[1], work: v[2] });
+    if (history.length > HISTORY) history.shift();
+    received += 1;
+    bytes += buffer.byteLength;
+    arrivals.push(performance.now());
+    document.getElementById('size').textContent = String(buffer.byteLength);
+  });
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

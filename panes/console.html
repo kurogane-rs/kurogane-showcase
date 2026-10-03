@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Console</title>
+<link rel="stylesheet" href="pane.css">
+<style>
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 16px 8px;
+  }
+  header p { margin: 0; }
+  ol {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 8px 16px 12px;
+    overflow-y: auto;
+    list-style: none;
+    font: 12.5px/1.6 var(--mono);
+  }
+  li { display: flex; gap: 14px; white-space: pre-wrap; }
+  time { flex: none; color: var(--muted); }
+  li.fresh span { animation: arrive 900ms ease-out; }
+  @keyframes arrive { from { color: var(--chromium); } }
+  @media (prefers-reduced-motion: reduce) { li.fresh span { animation: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Console</h1>
+    <p>What the Rust loop reports, as events to this page.</p>
+  </header>
+  <ol id="lines"></ol>
+<script>
+'use strict';
+
+const list = document.getElementById('lines');
+const LIMIT = 300;
+// Follow the newest line until the reader scrolls up, through resizes too
+let following = true;
+list.addEventListener('scroll', () => {
+  following = list.scrollTop + list.clientHeight >= list.scrollHeight - 8;
+});
+new ResizeObserver(() => { if (following) list.scrollTop = list.scrollHeight; }).observe(list);
+
+function clock() {
+  const d = new Date();
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+}
+
+function add(text, fresh) {
+  const item = document.createElement('li');
+  if (fresh) item.className = 'fresh';
+  const time = document.createElement('time');
+  time.textContent = fresh ? clock() : 'earlier';
+  const words = document.createElement('span');
+  words.textContent = text;
+  item.append(time, words);
+  list.append(item);
+  while (list.children.length > LIMIT) list.firstChild.remove();
+  if (following) list.scrollTop = list.scrollHeight;
+}
+
+function parse(payload) {
+  if (typeof payload === 'string') return JSON.parse(payload);
+  if (payload instanceof ArrayBuffer) return JSON.parse(new TextDecoder().decode(payload));
+  return payload;
+}
+
+(async () => {
+  for (const line of await kurogane.invoke('console.backlog')) add(line, false);
+  kurogane.on('console.line', payload => add(parse(payload), true));
+})();
+</script>
+</body>
+</html>

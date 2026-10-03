@@ -1,0 +1,5 @@
+[target.'cfg(all(unix, not(target_os = "macos")))']
+rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN/cef"]
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-arg=-Wl,-rpath,@executable_path"]
