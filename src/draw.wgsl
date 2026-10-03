@@ -1,4 +1,5 @@
-// Draws each star as a small glowing quad, its colour from its speed.
+// Draws each star as a small glowing disc on one triangle, its colour from
+// its speed.
 
 struct Star {
     pos: vec4<f32>,
@@ -29,15 +30,16 @@ fn hsv(h: f32, s: f32, v: f32) -> vec3<f32> {
 
 @vertex
 fn vs(@builtin(vertex_index) v: u32) -> Fragment {
-    var corners = array<vec2<f32>, 6>(
-        vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0), vec2<f32>(1.0, 1.0),
-        vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, 1.0), vec2<f32>(-1.0, 1.0),
+    // The triangle around the unit circle the glow fills: half the vertices
+    // and triangles of a quad, and its corners outside the circle add nothing
+    var corners = array<vec2<f32>, 3>(
+        vec2<f32>(0.0, 2.0), vec2<f32>(-1.7320508, -1.0), vec2<f32>(1.7320508, -1.0),
     );
-    let star = sky[v / 6u];
-    let corner = corners[v % 6u];
+    let star = sky[v / 3u];
+    let corner = corners[v % 3u];
 
     var clip = draw.view_proj * vec4<f32>(star.pos.xyz, 1.0);
-    // A quad `size` pixels across, whatever the distance
+    // A glow `size` pixels across, whatever the distance
     clip = vec4<f32>(clip.xy + corner * draw.size / draw.viewport * clip.w, clip.zw);
 
     // Slow stars take the galaxy's colour, fast ones burn hot

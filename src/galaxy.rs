@@ -512,7 +512,8 @@ impl Galaxy {
         pass.set_pipeline(&self.draw);
         for (chunk, count) in self.in_use() {
             pass.set_bind_group(0, &chunk.draw_group, &[]);
-            pass.draw(0..count * 6, 0..1);
+            // A triangle a star
+            pass.draw(0..count * 3, 0..1);
         }
     }
 

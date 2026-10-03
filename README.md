@@ -35,7 +35,7 @@ The CLI resolves and stages the Chromium runtime for you. On Linux the window mu
 | Piece | Owned by | What it does |
 |---|---|---|
 | Window and event loop | **winit** (`src/host.rs`) | One thread, one loop, owned by the app |
-| The galaxy | **wgpu** (`src/galaxy.rs`, `src/step.wgsl`, `src/draw.wgsl`) | A compute shader moves the stars and counts them into two histograms; a render pass draws them as additive glowing quads |
+| The galaxy | **wgpu** (`src/galaxy.rs`, `src/step.wgsl`, `src/draw.wgsl`) | A compute shader moves the stars and counts them into two histograms; a render pass draws them as additive glowing discs |
 | Frame chrome and HUD | **egui** (`src/ui.rs`) | The wires between panes, labels and per-frame cost readouts |
 | The three panes | **Chromium, through Kurogane** | `panes/controls.html`, `panes/charts.html` and `panes/console.html`, real web pages placed inside the window |
 
@@ -43,7 +43,7 @@ wgpu does all the simulation and drawing. Kurogane does none of it. Kurogane is 
 
 ```
 winit window (the app's)
- ├─ wgpu surface ............ galaxy + egui chrome   ← the app's GPU frame
+ ├─ wgpu surface ............ galaxy + egui chrome   <- the app's GPU frame
  ├─ child window: controls ─┐
  ├─ child window: charts    ├─ Chromium (Alloy, windowed), moved every frame
  └─ child window: console  ─┘
