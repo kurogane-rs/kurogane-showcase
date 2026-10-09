@@ -1,0 +1,3 @@
+[template]
+# The showcase has no placeholders; its sources hold Liquid-like braces
+exclude = ["**"]
