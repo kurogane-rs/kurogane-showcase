@@ -1,8 +1,8 @@
 //! A simple GPU demo with stars orbiting a central mass.
 //!
 //! The stars are simulated and rendered on the GPU each frame. They live in
-//! buffers of `CHUNK` stars, added as the count grows until GPU memory runs
-//! out.
+//! buffers of `CHUNK` stars that are added as the count grows until GPU
+//! memory runs out.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -13,19 +13,20 @@ use serde::{Deserialize, Serialize};
 
 /// Histogram bins per histogram.
 pub const BINS: usize = 64;
-/// The most stars the controls can ask for; GPU memory runs out first.
-pub const MAX_STARS: u32 = 1 << 30;
-/// Stars per buffer: 128 MiB, wgpu's default limit for one storage binding,
-/// and 16,384 workgroups, within the limit for one dispatch.
+/// Most stars the showcase offers. It is a real load for any GPU and looks its
+/// best around one to four million.
+pub const MAX_STARS: u32 = 1 << 24;
+/// Stars per buffer. Its 128 MiB match wgpu's default limit for one storage
+/// binding; its 16,384 workgroups stay within the limit for one dispatch.
 const CHUNK: u32 = 1 << 22;
 const STAR_BYTES: u64 = 32;
 const WORKGROUP: u32 = 256;
-/// GPU memory the stars leave free for everything else, since the budget
-/// they fill moves with what other processes use: twice 256 MiB, wgpu's
-/// default limit for one buffer.
+/// GPU memory the stars leave free for everything else. The budget they fill
+/// moves with what other processes use. It is twice wgpu's default 256 MiB
+/// limit for one buffer.
 const HEADROOM: u64 = 256 << 20;
-/// Mappable memory left free for what every frame allocates: staging for
-/// uniform writes and egui's buffers. Its budget shrinks as the stars grow.
+/// Mappable memory left free for what every frame allocates (staging for
+/// uniform writes and egui's buffers). Its budget shrinks as the stars grow.
 const STAGING_HEADROOM: u64 = 32 << 20;
 
 /// What the controls pane steers.
@@ -85,7 +86,7 @@ struct DrawUniform {
     hue: f32,
 }
 
-/// The stars' histograms, as fractions of the stars counted.
+/// Stars' histograms as fractions of the stars counted.
 #[derive(Clone)]
 pub struct Histograms {
     pub radius: [f32; BINS],
@@ -103,12 +104,12 @@ impl Default for Histograms {
 
 /// A buffer of stars and the bindings that reach it.
 struct Chunk {
-    /// The galaxy-wide index of its first star
+    /// Galaxy-wide index of its first star
     first: u32,
     uniform: wgpu::Buffer,
     sim_group: wgpu::BindGroup,
     draw_group: wgpu::BindGroup,
-    /// The star count last written to `uniform`
+    /// Star count last written to `uniform`
     written: Option<u32>,
     seeded: bool,
 }
@@ -130,11 +131,11 @@ pub struct Galaxy {
     step: wgpu::ComputePipeline,
     draw: wgpu::RenderPipeline,
     chunks: Vec<Chunk>,
-    /// The stars stepped and drawn: as many as asked for that fit
+    /// Stars stepped and drawn (as many as asked for that fit)
     stars: u32,
-    /// GPU memory ran out, so no more buffers are tried
+    /// GPU memory ran out; no more buffers are tried
     full: bool,
-    /// The stars counted into the histograms on their way back
+    /// Stars counted into the histograms on their way back
     counted: u32,
     time: f32,
     orbit: f32,
@@ -243,7 +244,7 @@ impl Galaxy {
             bind_group_layouts: &[Some(&draw_layout)],
             immediate_size: 0,
         });
-        // Light adds up: dense regions glow
+        // Light adds up; dense regions glow
         let additive = wgpu::BlendComponent {
             src_factor: wgpu::BlendFactor::One,
             dst_factor: wgpu::BlendFactor::One,
@@ -300,8 +301,8 @@ impl Galaxy {
         }
     }
 
-    /// Asks for `count` stars and returns how many there are: buffers are
-    /// added as needed, until GPU memory runs out.
+    /// Asks for `count` stars and returns how many there are. Buffers are added
+    /// as needed until GPU memory runs out.
     pub fn reserve(&mut self, device: &wgpu::Device, count: u32) -> u32 {
         let count = count.min(MAX_STARS);
         let had = self.chunks.len();
@@ -402,7 +403,7 @@ impl Galaxy {
         true
     }
 
-    /// Each buffer with stars in use, and how many.
+    /// Each buffer with stars in use and how many.
     fn in_use(&self) -> impl Iterator<Item = (&Chunk, u32)> {
         let stars = self.stars;
         self.chunks
@@ -425,7 +426,7 @@ impl Galaxy {
         self.orbit += dt * params.spin;
         self.frame = self.frame.wrapping_add(1);
         let uniform = SimUniform {
-            // Twice real time: the inner orbits take a couple of seconds
+            // Twice real time; the inner orbits take a couple of seconds
             dt: dt * 2.0,
             gravity: params.gravity,
             swirl: params.swirl,
@@ -477,8 +478,8 @@ impl Galaxy {
         }
     }
 
-    /// Draws the galaxy into `viewport`, in the surface's pixels, on a
-    /// surface `surface` pixels in size.
+    /// Draws the galaxy into `viewport` on a surface `surface` pixels in size.
+    /// Both are in the surface's pixels.
     pub fn draw(
         &self,
         queue: &wgpu::Queue,
@@ -517,8 +518,8 @@ impl Galaxy {
         }
     }
 
-    /// After the frame's commands are submitted: asks for the histograms
-    /// copied this frame, and takes the ones that have arrived.
+    /// Asks for the histograms copied this frame and takes the ones that have
+    /// arrived. Runs after the frame's commands are submitted.
     pub fn collect(&mut self, device: &wgpu::Device) {
         if self.readback_state.load(Ordering::Acquire) == COPIED {
             self.readback_state.store(MAPPING, Ordering::Release);
@@ -548,8 +549,8 @@ impl Galaxy {
     }
 }
 
-/// Whether GPU memory has room to spare, for buffers like the stars' and
-/// for staging: buffers that big are made and dropped at once.
+/// Returns whether GPU memory has room to spare for buffers like the stars'
+/// and for staging. Buffers that big are made and dropped at once.
 fn has_room(device: &wgpu::Device) -> bool {
     let scope = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
     let _probes = [

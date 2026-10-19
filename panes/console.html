@@ -39,7 +39,7 @@
 
 const list = document.getElementById('lines');
 const LIMIT = 300;
-// Follow the newest line until the reader scrolls up, through resizes too
+// Follow the newest line through resizes until the reader scrolls up
 let following = true;
 list.addEventListener('scroll', () => {
   following = list.scrollTop + list.clientHeight >= list.scrollHeight - 8;

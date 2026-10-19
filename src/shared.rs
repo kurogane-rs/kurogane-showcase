@@ -26,11 +26,11 @@ pub struct Shared {
     wake: OnceLock<EventLoopProxy<UserEvent>>,
     params: Mutex<Params>,
     burst: AtomicBool,
-    /// The charts panes' open telemetry streams
+    /// Charts panes' open telemetry streams
     telemetry: Mutex<Vec<StreamResponder>>,
     /// How often Chromium asked to be pumped since the loop last looked
     pump_requests: AtomicU32,
-    /// The console's recent lines for a console that opens late
+    /// Console's recent lines for a console that opens late
     backlog: Mutex<VecDeque<String>>,
     /// Commands and console lines since the last loop update
     commands: AtomicU32,
@@ -50,7 +50,7 @@ impl Shared {
         }
     }
 
-    /// Chromium scheduler pumps by its deadline.
+    /// Schedules a Chromium pump by its deadline.
     pub fn pump_by(&self, deadline: Instant) {
         self.pump_requests.fetch_add(1, Ordering::Relaxed);
         self.send(UserEvent::Pump(deadline));
@@ -80,7 +80,7 @@ impl Shared {
         self.burst.swap(false, Ordering::Relaxed)
     }
 
-    /// A charts pane opened the telemetry stream.
+    /// Keeps the telemetry stream a charts pane opened.
     pub fn watch(&self, responder: StreamResponder) {
         self.telemetry
             .lock()
@@ -88,7 +88,7 @@ impl Shared {
             .push(responder);
     }
 
-    /// A pane's command reached Rust.
+    /// Counts a pane's command that reached Rust.
     pub fn count_command(&self) {
         self.commands.fetch_add(1, Ordering::Relaxed);
     }
@@ -101,7 +101,8 @@ impl Shared {
         )
     }
 
-    /// Tells the console something, now and to a console that opens later.
+    /// Tells the console something now and keeps it for a console that opens
+    /// later.
     pub fn log(&self, app: &AppHandle, line: String) {
         app.broadcast_json("console.line", &line);
         self.lines.fetch_add(1, Ordering::Relaxed);

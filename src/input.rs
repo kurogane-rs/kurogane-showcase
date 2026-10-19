@@ -1,9 +1,9 @@
-//! Records what steers the scene, and plays it back.
+//! Records what steers the scene and plays it back.
 //!
-//! `--record=<name>` keeps every change the loop sees, from the panes or the
-//! keyboard, with its time since the first frame, in `perf/<name>.input.json`.
-//! A benchmark with `--replay=<name>` makes the same changes at the same
-//! times, whatever the controls do meanwhile.
+//! `--record=<name>` keeps every change the loop sees from the panes or the
+//! keyboard in `perf/<name>.input.json`. Each change keeps its time since the
+//! first frame. A benchmark with `--replay=<name>` makes the same changes at
+//! the same times whatever the controls do meanwhile.
 
 use std::error::Error;
 use std::fs;
@@ -18,10 +18,10 @@ use crate::perf;
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Input {
-    /// The sliders, all of them
+    /// All the sliders
     Params(Params),
     Burst,
-    /// Pull apart, or dock again
+    /// Pull apart or dock again
     Explode,
 }
 
@@ -58,8 +58,7 @@ impl Recorder {
         file(&self.name)
     }
 
-    /// Each frame: keeps the sliders when they have changed, and the first
-    /// frame's as they start.
+    /// Keeps the first frame's sliders and every change after it.
     pub fn params(&mut self, now: Instant, params: Params) {
         if self.last != Some(params) {
             self.last = Some(params);
@@ -72,7 +71,7 @@ impl Recorder {
         self.events.push(Event { at, input });
     }
 
-    /// Writes the recording, when the app is done.
+    /// Writes the recording when the app is done.
     pub fn save(&self) {
         let path = self.file();
         let written = serde_json::to_string_pretty(&self.events)

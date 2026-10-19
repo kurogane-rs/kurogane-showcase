@@ -1,12 +1,12 @@
 :root {
-  /* Chromium's own parts, scrollbars and form controls, match the dark page */
+  /* Chromium's own scrollbars and form controls match the dark page */
   color-scheme: dark;
   --bg: #0a0c12;
   --raised: #11141c;
   --line: #222838;
   --ink: #dee2eb;
   --muted: #7a8294;
-  /* The same two colours the native chrome uses */
+  /* The same two colors the native chrome uses */
   --chromium: #f2b24c;
   --gpu: #8b7bff;
   --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;

@@ -12,7 +12,7 @@ pub struct Gpu {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
-    /// The GPU and the API wgpu drives it with
+    /// GPU and the API wgpu drives it with
     pub adapter: String,
 }
 
@@ -34,12 +34,12 @@ impl Gpu {
             ..Default::default()
         }))?;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            // Timing the passes, where the GPU can
+            // Timing the passes where the GPU can
             required_features: adapter.features() & wgpu::Features::TIMESTAMP_QUERY,
             ..Default::default()
         }))?;
-        // Running out of memory costs a write or a frame, not the app; any
-        // other error is a bug and panics, as by default
+        // Running out of memory costs a write or a frame rather than the app;
+        // any other error is a bug and panics as by default
         let told = AtomicBool::new(false);
         device.on_uncaptured_error(Arc::new(move |error| match error {
             wgpu::Error::OutOfMemory { .. } => {

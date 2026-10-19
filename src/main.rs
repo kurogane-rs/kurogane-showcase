@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bench = options
         .bench
         .map(|name| Bench::new(name, options.against, replay));
-    // A benchmark ignores the controls, so there is nothing to record
+    // A benchmark ignores the controls; there is nothing to record
     let recorder = options.record.filter(|_| bench.is_none()).map(Recorder::new);
 
     let shared = Arc::new(Shared::default());
@@ -101,7 +101,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 shared: shared.clone(),
             }
         })
-        // E pulls the window apart wherever the keyboard is, a pane included
+        // E pulls the window apart wherever the keyboard is (a pane included)
         .on_key({
             let shared = shared.clone();
             move |press, _| {
@@ -120,7 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     host::run(instance, shared, bench, recorder)
 }
 
-/// A charts pane's telemetry stream: the loop sends on it every frame.
+/// A charts pane's telemetry stream that the loop sends on every frame.
 struct Telemetry {
     shared: Arc<Shared>,
 }
@@ -136,9 +136,9 @@ impl StreamHandler for Telemetry {
     }
 }
 
-/// Kurogane's warnings and errors; `RUST_LOG` for more. With a trace, the
-/// trace file also gets everything at info and above, every frame's timings
-/// among it, as JSON lines.
+/// Logs Kurogane's warnings and errors; `RUST_LOG` adds more. With a trace the
+/// trace file also gets everything at info and above as JSON lines (every
+/// frame's timings among it).
 fn logging(trace: Option<&Path>) -> Option<WorkerGuard> {
     let terminal = fmt::layer()
         .without_time()
@@ -148,7 +148,7 @@ fn logging(trace: Option<&Path>) -> Option<WorkerGuard> {
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::WARN.into())
                 .from_env_lossy()
-                // Every frame's timings belong in the trace, not the terminal
+                // Every frame's timings belong in the trace rather than the terminal
                 .add_directive("perf=off".parse().expect("a valid directive")),
         );
 
@@ -165,7 +165,7 @@ fn logging(trace: Option<&Path>) -> Option<WorkerGuard> {
                 None
             }
         });
-    // Written on a thread of its own, so the loop never waits on the disk
+    // Written on a thread of its own; the loop never waits on the disk
     let (writer, guard) = match file {
         Some(file) => {
             let (writer, guard) = NonBlockingBuilder::default().lossy(false).finish(file);

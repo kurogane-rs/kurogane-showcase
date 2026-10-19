@@ -1,7 +1,7 @@
 //! Times the frame's GPU passes with timestamp queries.
 //!
-//! Like the galaxy's histograms, the timings come back through mapped
-//! buffers a frame or two later, so the frame never waits for the GPU.
+//! Like the galaxy's histograms the timings come back through mapped buffers
+//! a frame or two later. The frame never waits for the GPU.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -9,9 +9,9 @@ use std::sync::atomic::{AtomicU8, Ordering};
 /// A pass the timer times.
 #[derive(Clone, Copy)]
 pub enum Pass {
-    /// The galaxy's compute step
+    /// Galaxy's compute step
     Compute,
-    /// The stars drawn
+    /// Stars drawn
     Draw,
     /// egui's chrome drawn over them
     Chrome,
@@ -27,7 +27,7 @@ const COPIED: u8 = 1;
 const MAPPING: u8 = 2;
 const MAPPED: u8 = 3;
 
-/// One frame's time on the GPU, in milliseconds.
+/// One frame's time on the GPU in milliseconds.
 #[derive(Clone, Copy, Default)]
 pub struct GpuTimes {
     pub frame: u64,
@@ -53,7 +53,7 @@ impl GpuTimes {
         );
     }
 
-    /// Moves a share `k` of the way to `next`: a steady figure for the HUD.
+    /// Moves a share `k` of the way to `next` for a steady figure in the HUD.
     pub fn ease(&mut self, next: &GpuTimes, k: f64) {
         self.total += (next.total - self.total) * k;
         self.compute += (next.compute - self.compute) * k;
@@ -75,12 +75,12 @@ pub struct GpuTimer {
     slots: Vec<Slot>,
     /// Nanoseconds per timestamp tick
     period: f64,
-    /// Where this frame's timings go, when a slot was free
+    /// Where this frame's timings go when a slot was free
     current: Option<usize>,
 }
 
 impl GpuTimer {
-    /// A timer, when the device can write timestamps.
+    /// Creates a timer when the device can write timestamps.
     pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Option<Self> {
         if !device.features().contains(wgpu::Features::TIMESTAMP_QUERY) {
             return None;
@@ -118,7 +118,7 @@ impl GpuTimer {
         })
     }
 
-    /// Before a frame's passes: the frame is timed when a slot is free.
+    /// Starts timing a frame before its passes when a slot is free.
     pub fn begin(&mut self, frame: u64, stars: u32) {
         self.current = self
             .slots
@@ -150,7 +150,7 @@ impl GpuTimer {
         })
     }
 
-    /// After the frame's passes: copies their timestamps out.
+    /// Copies the frame's timestamps out after its passes.
     pub fn resolve(&self, encoder: &mut wgpu::CommandEncoder) {
         let Some(i) = self.current else { return };
         encoder.resolve_query_set(&self.queries, 0..PASSES * 2, &self.resolved, 0);
@@ -158,8 +158,8 @@ impl GpuTimer {
         self.slots[i].state.store(COPIED, Ordering::Release);
     }
 
-    /// After the frame's commands are submitted: asks for the timings
-    /// copied this frame, and returns the ones that have arrived.
+    /// Asks for the timings copied this frame and returns the ones that have
+    /// arrived. Runs after the frame's commands are submitted.
     pub fn collect(&mut self, device: &wgpu::Device) -> Vec<GpuTimes> {
         for slot in &self.slots {
             if slot.state.load(Ordering::Acquire) == COPIED {
@@ -220,7 +220,7 @@ impl GpuTimer {
     }
 }
 
-/// The queries a pass writes at its start and its end.
+/// Returns the queries a pass writes at its start and its end.
 fn indices(pass: Pass) -> (u32, u32) {
     let first = pass as u32 * 2;
     (first, first + 1)

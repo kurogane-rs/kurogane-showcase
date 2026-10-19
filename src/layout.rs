@@ -45,7 +45,7 @@ const CONSOLE_H: f32 = 190.0;
 /// Room above each tile for its label when exploded.
 const LABEL_H: f32 = 46.0;
 
-/// A critically damped spring per value: fast, without wobble.
+/// Critically damped spring per value; fast and without wobble.
 #[derive(Clone, Copy)]
 struct Spring {
     value: f32,
@@ -69,7 +69,7 @@ impl Spring {
 
 struct Animated {
     springs: [Spring; 4],
-    /// Seconds before this tile starts moving, so the tiles leave in turn
+    /// Seconds before this tile starts moving; the tiles leave in turn
     delay: f32,
 }
 
@@ -113,8 +113,8 @@ impl Layout {
         }
     }
 
-    /// Puts every tile at its target at once: a resized window must not
-    /// leave the panes trailing behind its edges.
+    /// Puts every tile at its target at once. A resized window must not leave
+    /// the panes trailing behind its edges.
     pub fn snap(&mut self, window: (f32, f32)) {
         let targets: Vec<Rect> = self
             .tiles
@@ -180,7 +180,7 @@ impl Layout {
     }
 }
 
-/// Controls on the left, charts on the right, the scene between them, the
+/// Controls on the left, charts on the right, the scene between them and the
 /// console along the bottom.
 fn docked(tile: Tile, w: f32, h: f32) -> Rect {
     let top_h = (h - TOP - MARGIN - GAP - CONSOLE_H).max(120.0);
@@ -193,7 +193,7 @@ fn docked(tile: Tile, w: f32, h: f32) -> Rect {
     }
 }
 
-/// Each tile where it is docked, shrunk about its own centre, so gaps open
+/// Each tile shrunk about its own center where it is docked. Gaps open
 /// between them for the labels and the wires. The panes shrink little
 /// enough that their pages stay readable.
 fn exploded(tile: Tile, w: f32, h: f32) -> Rect {

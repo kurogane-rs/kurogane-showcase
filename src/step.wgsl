@@ -48,8 +48,8 @@ fn rand(n: u32) -> f32 {
     return f32(hash(n)) / 4294967295.0;
 }
 
-// A star on the disc between two radii, on a near-circular orbit, placed on
-// one of two spiral arms
+// A star on the disc between two radii in a near-circular orbit on one of
+// two spiral arms
 fn spawn(i: u32, salt: u32, r_min: f32, r_max: f32) -> Star {
     let k = hash(i ^ (salt * 0x9e3779b9u));
     let a = rand(k);
@@ -103,21 +103,21 @@ fn step(
         let d2 = dot(r, r) + 0.02;
         let d = sqrt(d2);
 
-        // The central mass, softened so nothing divides by zero
+        // The central mass softened so nothing divides by zero
         var acc = -r * (sim.gravity / (d2 * d));
         // A thin disc
         acc.y -= r.y * 2.0;
-        // Swirl: a push along the orbit
+        // Swirl pushes along the orbit
         acc += cross(vec3<f32>(0.0, 1.0, 0.0), r) * (sim.swirl / (d2 + 0.5));
         acc += field(r, sim.time) * sim.turbulence;
-        // Burst: a blast outwards from the centre
+        // Burst blasts outward from the center
         acc += r / d * (sim.burst / (d + 0.3));
 
         var v = (star.vel.xyz + acc * sim.dt) * (1.0 - 0.015 * sim.dt);
         let next = r + v * sim.dt;
         let nd = length(next);
         if (nd < 0.06 || nd > 9.0) {
-            // Swallowed by the centre, or flung out: born again at the rim
+            // A star swallowed by the center or flung out is born again at the rim
             star = spawn(chunk.first + i, sim.seed, 2.6, 5.4);
             v = star.vel.xyz;
         } else {

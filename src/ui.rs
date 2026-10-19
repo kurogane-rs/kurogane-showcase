@@ -1,6 +1,6 @@
 //! Native UI drawn with egui alongside the galaxy.
 //!
-//! It shows the title, frame info, and tile layout around the Chromium panes.
+//! It shows the title, frame info and tile layout around the Chromium panes.
 
 use std::collections::VecDeque;
 
@@ -12,9 +12,9 @@ use crate::layout::{Layout, Rect, TILES, Tile};
 const INK: Color32 = Color32::from_rgb(222, 226, 235);
 const MUTED: Color32 = Color32::from_rgb(122, 130, 148);
 const FRAME: Color32 = Color32::from_rgb(38, 43, 58);
-/// Chromium's colour in the chrome: its share of the frame, its labels
+/// Chromium's color in the chrome for its share of the frame and its labels
 pub const CHROMIUM: Color32 = Color32::from_rgb(242, 178, 76);
-/// The GPU's colour
+/// GPU's color in the chrome
 pub const GPU: Color32 = Color32::from_rgb(139, 123, 255);
 
 /// What one frame cost the loop, in milliseconds.
@@ -76,7 +76,7 @@ pub struct Hud<'a> {
     pub adapter: &'a str,
     /// 0 docked, 1 pulled apart, in between while moving
     pub apart: f32,
-    /// The GPU's recent frames, when it can time its passes
+    /// Recent GPU frames when the GPU can time its passes
     pub gpu: Option<GpuTimes>,
 }
 
@@ -94,7 +94,7 @@ pub fn draw(painter: &Painter, layout: &Layout, hud: &Hud, wires: &Wires) {
     }
 }
 
-/// The three ways the loop and the panes talk, drawn between the tiles
+/// Three ways the loop and the panes talk. They are drawn between the tiles
 /// when the window is pulled apart.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Wire {
@@ -113,8 +113,8 @@ const TRAVEL: f32 = 0.55;
 /// real rate.
 const SPACING: f32 = 1.0 / 20.0;
 
-/// Messages in flight along the wires, one dot per message, and the rates
-/// of the last full second.
+/// Messages in flight along the wires as one dot each and the rates of the
+/// last full second.
 pub struct Wires {
     dots: Vec<(Wire, f32)>,
     since: [f32; 3],
@@ -152,7 +152,7 @@ impl Wires {
     }
 }
 
-/// A wire's curve: from the tile that sends to the one that receives.
+/// A wire's curve from the tile that sends to the one that receives.
 fn path(wire: Wire, layout: &Layout) -> [Pos2; 4] {
     let scene = to_egui(layout.rect(Tile::Scene));
     let across = |a: Pos2, b: Pos2| {
@@ -314,8 +314,9 @@ fn scene_overlay(painter: &Painter, r: Rect, hud: &Hud) {
     budget_chart(painter, scene.left_bottom() + vec2(14.0, -14.0), hud.budget);
 }
 
-/// The last three seconds of frames, one bar each: Chromium's pump at the
-/// bottom, the loop's own work on top, the rest of the frame faint.
+/// Draws the last three seconds of frames as one bar each. Chromium's pump
+/// sits at the bottom with the loop's own work on top and the rest of the
+/// frame faint.
 fn budget_chart(painter: &Painter, bottom_left: Pos2, budget: &Budget) {
     const HEIGHT: f32 = 54.0;
     const SCALE: f32 = HEIGHT / 20.0;
@@ -372,7 +373,7 @@ fn budget_chart(painter: &Painter, bottom_left: Pos2, budget: &Budget) {
     );
 }
 
-/// What a tile is, above it, once the window is pulled apart.
+/// Draws what a tile is above it once the window is pulled apart.
 fn label(painter: &Painter, tile: Tile, r: Rect, apart: f32) {
     let (kind, color, what) = match tile {
         Tile::Scene => (

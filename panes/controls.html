@@ -90,15 +90,15 @@
 <script>
 'use strict';
 
-// Each knob: how it maps onto the galaxy's parameter, and how it reads.
-// Stars go up to 2^30, Rust's limit; GPU memory usually runs out first
+// How each knob maps onto the galaxy's parameter and how it reads
+// Stars go up to Rust's MAX_STARS of 2^24
 const KNOBS = [
-  { key: 'count', label: 'Stars', min: 16, max: 30, step: 0.25,
+  { key: 'count', label: 'Stars', min: 16, max: 24, step: 0.25,
     from: v => Math.round(2 ** v), to: c => Math.log2(c), show: c => c.toLocaleString('en-US') },
   { key: 'gravity', label: 'Gravity', min: 0.2, max: 3, step: 0.01, show: v => v.toFixed(2) },
   { key: 'swirl', label: 'Swirl', min: -1, max: 1.5, step: 0.01, show: v => v.toFixed(2) },
   { key: 'turbulence', label: 'Turbulence', min: 0, max: 0.8, step: 0.01, show: v => v.toFixed(2) },
-  { key: 'hue', label: 'Colour', min: 0, max: 1, step: 0.005, show: v => `${Math.round(v * 360)}°` },
+  { key: 'hue', label: 'Color', min: 0, max: 1, step: 0.005, show: v => `${Math.round(v * 360)}°` },
   { key: 'spin', label: 'Camera spin', min: 0, max: 0.4, step: 0.005, show: v => v.toFixed(3) },
   { key: 'size', label: 'Star size', min: 0.8, max: 4, step: 0.05, show: v => `${v.toFixed(2)} px` },
 ];
@@ -143,7 +143,7 @@ function build() {
   }
 }
 
-// At most one command a frame, carrying the latest values
+// At most one command a frame with the latest values
 function queueSend() {
   if (sendQueued) return;
   sendQueued = true;
@@ -176,7 +176,7 @@ document.addEventListener('keydown', e => {
 (async () => {
   params = await kurogane.invoke('sim.get');
   build();
-  // A round trip a second, so the number is live before anything is touched
+  // A round trip a second keeps the number live before anything is touched
   setInterval(async () => {
     const started = performance.now();
     await kurogane.invoke('sim.get');

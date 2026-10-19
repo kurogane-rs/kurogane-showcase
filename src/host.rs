@@ -1,8 +1,8 @@
-//! The main window loop: handles events, updates the layout,
-//! renders the GPU scene and keeps Chromium responsive.
+//! Runs the main window loop.
 //!
-//! Each frame updates the panes, draws the scene and UI,
-//! sends telemetry to the charts and pumps Chromium.
+//! The loop handles events, updates the layout, renders the GPU scene and
+//! keeps Chromium responsive. Each frame updates the panes, draws the scene
+//! and UI, sends telemetry to the charts and pumps Chromium.
 
 use std::error::Error;
 use std::sync::Arc;
@@ -46,11 +46,11 @@ struct Egui {
 struct Pane {
     tile: Tile,
     browser: BrowserHandle,
-    /// Where it was last put, so an unmoved pane is left alone
+    /// Where it was last put; an unmoved pane is left alone
     placed: Option<(i32, i32, i32, i32)>,
 }
 
-/// What the loop counts over a second, for the console and the wires.
+/// What the loop counts over a second for the console and the wires.
 #[derive(Default)]
 struct Second {
     frames: u32,
@@ -75,19 +75,19 @@ struct Host {
     panes: Vec<Pane>,
     adapter: String,
     budget: Budget,
-    /// The GPU's recent frames, for the HUD
+    /// Recent GPU frames for the HUD
     gpu_times: Option<GpuTimes>,
     wires: Wires,
-    /// Steers the scene while it runs, instead of the controls
+    /// Steers the scene in place of the controls while it runs
     bench: Option<Bench>,
-    /// Keeps the controls' changes, for a benchmark to replay
+    /// Keeps the controls' changes for a benchmark to replay
     recorder: Option<Recorder>,
     next_pump: Instant,
     /// One frame per refresh of the window's display
     frame_period: Duration,
     next_frame: Instant,
     last_frame: Instant,
-    /// Frames drawn, for the trace
+    /// Frames drawn for the trace
     frames: u64,
     /// Spent in Chromium's pump since the last frame
     pump_ms: f64,
@@ -144,7 +144,7 @@ pub fn run(
         wires: Wires::new(),
         bench,
         recorder,
-        // At once: requests made before the proxy was set went nowhere
+        // Pump at once; requests made before the proxy was set went nowhere
         next_pump: now,
         frame_period: Duration::from_secs(1) / 60,
         next_frame: now,
@@ -174,7 +174,7 @@ impl ApplicationHandler<UserEvent> for Host {
 
     fn user_event(&mut self, _: &ActiveEventLoop, event: UserEvent) {
         match event {
-            // Keep the earliest: pumping early is harmless, late stalls Chromium
+            // Keep the earliest; pumping late stalls Chromium and early is harmless
             UserEvent::Pump(deadline) => self.next_pump = self.next_pump.min(deadline),
             UserEvent::Explode => self.explode_asked(),
         }
@@ -234,7 +234,7 @@ impl ApplicationHandler<UserEvent> for Host {
         }
 
         if self.instance.should_shutdown() {
-            // Once: the loop can pass here again before it exits
+            // Save only once; the loop can pass here again before it exits
             if let Some(recorder) = self.recorder.take() {
                 recorder.save();
             }
@@ -249,9 +249,9 @@ impl ApplicationHandler<UserEvent> for Host {
             return;
         }
 
-        // A frame per refresh. Between frames the loop sleeps, and wakes at
-        // once when Chromium asks for work: a page's command is answered
-        // within a pump, not at the next frame
+        // A frame per refresh. Between frames the loop sleeps and wakes at
+        // once when Chromium asks for work. A page's command is answered
+        // within a pump rather than at the next frame
         let now = Instant::now();
         if now >= self.next_frame {
             if let Some(window) = &self.window {
@@ -366,8 +366,8 @@ impl Host {
         (size.width, size.height)
     }
 
-    /// E or the Pull apart button: recorded when recording, and ignored
-    /// while a benchmark steers the scene.
+    /// Handles E or the Pull apart button. It is recorded when recording and
+    /// ignored while a benchmark steers the scene.
     fn explode_asked(&mut self) {
         if let Some(recorder) = &mut self.recorder {
             recorder.push(Instant::now(), Input::Explode);
@@ -390,7 +390,7 @@ impl Host {
         self.shared.log(self.instance.handle(), words.to_owned());
     }
 
-    /// Moves each pane to its tile, when its tile has moved.
+    /// Moves each pane to its tile when its tile has moved.
     fn place_panes(&mut self) {
         let (Some(window), Some(layout)) = (&self.window, &self.layout) else {
             return;
@@ -475,7 +475,7 @@ impl Host {
                     tracing::debug!(target: "perf", frame = self.frames, "skipped: surface reconfigured");
                     return;
                 }
-                // Minimised, covered or late: skip this frame
+                // Skip this frame when minimized, covered or late
                 _ => {
                     tracing::debug!(target: "perf", frame = self.frames, "skipped: no surface texture");
                     return;
@@ -587,7 +587,7 @@ impl Host {
                     [gpu.config.width, gpu.config.height],
                 );
             }
-            // egui over the whole surface, in a pass of its own so the GPU
+            // egui over the whole surface in a pass of its own so the GPU
             // times the stars and the chrome apart
             {
                 let mut pass = encoder
@@ -682,8 +682,8 @@ impl Host {
         self.instance.handle().close_all_browsers(true);
     }
 
-    /// One frame's numbers for the charts pane, as little-endian f32s:
-    /// interval, pump, work, stars, then the two histograms.
+    /// Sends one frame's numbers to the charts pane as little-endian f32s.
+    /// They are the interval, pump, work and stars, then the two histograms.
     fn send_telemetry(&mut self, cost: FrameCost, stars: u32) {
         let Some(galaxy) = &self.galaxy else { return };
         let mut values = Vec::with_capacity(4 + 2 * BINS);
@@ -697,7 +697,7 @@ impl Host {
         self.second.bytes += streams * bytes.len() as u32;
     }
 
-    /// Once a second, tells the console what the loop and Chromium did.
+    /// Tells the console once a second what the loop and Chromium did.
     fn report_second(&mut self) {
         self.second.frames += 1;
         if self.second_started.elapsed() < Duration::from_secs(1) {
@@ -718,7 +718,8 @@ impl Host {
     }
 }
 
-/// Where a pane goes for a tile: pixels on Windows and X11, points on macOS.
+/// Where a pane goes for a tile. Windows and X11 take pixels; macOS takes
+/// points.
 fn pane_bounds(window: &Window, r: Rect) -> BrowserBounds {
     let scale = if cfg!(target_os = "macos") {
         1.0

@@ -1,23 +1,23 @@
-//! What the loop measures, and the switches that write it down.
+//! What the loop measures and the switches that write it down.
 //!
-//! Each stage of a frame is a tracing span, so a trace shows which stage
-//! Kurogane's own events happened in, and the stage's milliseconds go into
-//! the frame's record. With a trace open, every frame's record is one JSON
-//! line in `perf/<name>.jsonl`.
+//! Each stage of a frame is a tracing span. A trace shows which stage
+//! Kurogane's own events happened in. The stage's milliseconds go into the
+//! frame's record. With a trace open every frame's record is one JSON line in
+//! `perf/<name>.jsonl`.
 
 use std::path::PathBuf;
 
 /// Where traces and benchmark summaries go.
 const PERF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/perf");
 
-/// The build the numbers come from: debug numbers are mostly unoptimised Rust.
+/// Build the numbers come from; debug numbers mostly measure unoptimized Rust.
 pub const BUILD: &str = if cfg!(debug_assertions) {
     "debug"
 } else {
     "release"
 };
 
-/// The showcase's switches, given after `--`:
+/// Showcase's switches. They go after `--` as in
 /// `kurogane run --release -- --bench=baseline`.
 ///
 /// Chromium ignores switches it does not know and passes none of these on to
@@ -26,17 +26,17 @@ pub const BUILD: &str = if cfg!(debug_assertions) {
 pub struct Options {
     /// `--trace=<name>`: every frame's timings in `perf/<name>.jsonl`
     pub trace: Option<String>,
-    /// `--bench=<name>`: the benchmark, traced, summarised in
+    /// `--bench=<name>`: the benchmark traced and summarized in
     /// `perf/<name>.json`; the window closes when it is done
     pub bench: Option<String>,
     /// `--replay=<recording>`: the benchmark replays a recording instead of
     /// stepping through the star counts
     pub replay: Option<String>,
-    /// `--record=<name>`: the controls' changes, kept in
+    /// `--record=<name>`: the controls' changes kept in
     /// `perf/<name>.input.json` for a benchmark to replay
     pub record: Option<String>,
     /// `--against=<name>`: the benchmark to compare with; by default
-    /// `baseline`, or `baseline-<recording>` for a replay
+    /// `baseline` or `baseline-<recording>` for a replay
     pub against: Option<String>,
     /// `--compare=<a>,<b>`: compares two benchmarks without opening a window
     pub compare: Option<(String, String)>,
@@ -68,7 +68,7 @@ impl Options {
         options
     }
 
-    /// The trace file, for a trace or a benchmark.
+    /// The trace file for a trace or a benchmark.
     pub fn trace_path(&self) -> Option<PathBuf> {
         self.bench
             .as_ref()
@@ -95,30 +95,30 @@ macro_rules! stage {
 }
 pub(crate) use stage;
 
-/// One frame's time on the CPU, stage by stage, in milliseconds.
+/// One frame's time on the CPU stage by stage in milliseconds.
 #[derive(Clone, Copy, Default)]
 pub struct CpuTimes {
     /// From the previous frame to this one
     pub interval: f64,
-    /// All of this frame's work on the loop, the stages below and the rest
+    /// All of this frame's work on the loop (the stages below and the rest)
     pub frame: f64,
     /// In Chromium's pumps since the previous frame
     pub pump: f64,
     /// Springs stepped and panes moved
     pub layout: f64,
-    /// Waiting for the surface's next texture: long when the GPU is behind
+    /// Waiting for the surface's next texture; long when the GPU is behind
     pub acquire: f64,
     /// Star buffers added for a higher star count
     pub grow: f64,
     /// egui's chrome laid out and tessellated
     pub ui: f64,
-    /// The compute and render passes recorded
+    /// Compute and render passes recorded
     pub encode: f64,
     pub submit: f64,
     pub present: f64,
     /// Histograms and GPU timings taken from mapped buffers
     pub readback: f64,
-    /// The charts' stream sent
+    /// Charts' stream sent
     pub telemetry: f64,
 }
 

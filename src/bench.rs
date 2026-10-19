@@ -1,16 +1,16 @@
-//! The benchmark: the scene steered the same way on every run, so a run
-//! before a change and one after it can be compared.
+//! Benchmark that steers the scene the same way on every run.
 //!
-//! By default it sweeps the Stars slider's range: from 2^16 stars it steps
-//! up by √2, lets each count settle for a second and measures it for three,
-//! until GPU memory is full or a count runs below 5 frames a second. With
-//! `--replay=<recording>` it plays back a recorded session instead, drags
-//! and all, and measures every frame.
+//! A run before a change and one after it can then be compared. By default
+//! it sweeps the Stars slider's range from 2^16 stars up by √2 at a time.
+//! Each count settles for a second and is measured for three. It stops after
+//! 2^24 stars or early at a count that runs below 5 frames a second or does
+//! not fit in GPU memory. With `--replay=<recording>` it plays back a
+//! recorded session instead (drags and all) and measures every frame.
 //!
 //! Either way the controls are ignored while it runs. It writes
-//! `perf/<name>.json`, prints its numbers per star count, and compares them
-//! with another run's: `--against=<name>`, or by default `baseline` for a
-//! sweep and `baseline-<recording>` for a replay, when there is one.
+//! `perf/<name>.json`, prints its numbers per star count and compares them
+//! with `--against=<name>` or by default with `baseline` for a sweep and
+//! `baseline-<recording>` for a replay once those exist.
 
 use std::error::Error;
 use std::fs;
@@ -26,14 +26,14 @@ use crate::ui::group_thousands;
 
 /// For the panes to load before anything is measured.
 const WARMUP: Duration = Duration::from_secs(3);
-/// After each new count: its buffers are made and seeded.
+/// Wait after each new count while its buffers are made and seeded.
 const SETTLE: Duration = Duration::from_secs(1);
 const MEASURE: Duration = Duration::from_secs(3);
-/// The sweep's first count, 2^16 stars, the slider's least.
+/// Power of two of the sweep's first count; 2^16 stars is the slider's least.
 const FIRST_POWER: f64 = 16.0;
 /// The sweep ends after a count slower than this.
 const SLOWEST_FPS: f64 = 5.0;
-/// After a replay's last input, for its effects to play out.
+/// Wait after a replay's last input for its effects to play out.
 const TAIL: f64 = 2.0;
 /// A count is reported when the run stayed at it this long; a replay's
 /// drags pass through many counts for a frame or two.
@@ -64,7 +64,7 @@ pub enum Next {
     Finish,
 }
 
-/// What the scene runs on this frame, from the benchmark.
+/// What the scene runs on this frame under the benchmark.
 pub struct Steer {
     pub params: Params,
     pub burst: bool,
@@ -75,7 +75,7 @@ pub struct Steer {
 #[derive(Clone, Copy)]
 struct Frame {
     stars: u32,
-    /// The stars the frame asked for: more when GPU memory was full
+    /// Stars the frame asked for; more than it drew when GPU memory was full
     asked: u32,
     cpu: CpuTimes,
 }
@@ -89,7 +89,7 @@ pub struct Bench {
     /// When the phase began
     since: Option<Instant>,
     params: Params,
-    /// The first frame measured
+    /// First frame measured
     measured_from: u64,
     frames: Vec<Frame>,
     gpu: Vec<GpuTimes>,
@@ -105,12 +105,12 @@ pub struct Setup {
     pub surface: [u32; 2],
 }
 
-/// A benchmark run, as `perf/<name>.json` keeps it.
+/// A benchmark run as `perf/<name>.json` keeps it.
 #[derive(Serialize, Deserialize)]
 pub struct Summary {
     pub name: String,
     pub build: String,
-    /// `sweep`, or the recording replayed
+    /// `sweep` or the recording replayed
     #[serde(default)]
     pub script: String,
     pub adapter: String,
@@ -118,7 +118,7 @@ pub struct Summary {
     pub refresh_hz: f64,
     pub surface: [u32; 2],
     pub steps: Vec<Step>,
-    /// A replay's every frame, all its star counts together
+    /// A replay's every frame with all its star counts together
     #[serde(default)]
     pub run: Option<Step>,
 }
@@ -127,18 +127,18 @@ pub struct Summary {
 #[derive(Serialize, Deserialize)]
 pub struct Step {
     pub stars: u32,
-    /// Fewer stars than asked for: GPU memory was full
+    /// Fewer stars than asked for because GPU memory was full
     pub memory_full: bool,
     pub frames: usize,
     /// How long the run stayed at this count
     #[serde(default)]
     pub seconds: f64,
     pub fps: f64,
-    /// The share of frames on time
+    /// Share of frames on time
     pub on_time: f64,
     pub interval: Stats,
     pub frame: Stats,
-    /// The frame's work without the wait for the surface's next texture
+    /// Frame's work without the wait for the surface's next texture
     #[serde(default)]
     pub busy: Stats,
     pub pump: Stats,
@@ -231,7 +231,7 @@ impl Step {
 }
 
 impl Bench {
-    /// A sweep, or a replay of `replay`.
+    /// Creates a sweep or a replay of `replay`.
     pub fn new(name: String, against: Option<String>, replay: Option<Player>) -> Self {
         Self {
             name,
@@ -249,7 +249,7 @@ impl Bench {
         }
     }
 
-    /// What it does, for the console.
+    /// Describes what it does for the console.
     pub fn describe(&self) -> String {
         match &self.script {
             Script::Sweep => "Benchmark: sweeping the star counts; the controls wait until it is done".to_owned(),
@@ -265,8 +265,8 @@ impl Bench {
         self.phase != Phase::Done
     }
 
-    /// Before each frame: what the scene runs on while the benchmark runs,
-    /// a replay's bursts and pull-aparts among it.
+    /// Returns what the scene runs on before each frame while the benchmark
+    /// runs. A replay's bursts and pull-aparts are part of it.
     pub fn steer(&mut self, now: Instant) -> Option<Steer> {
         if !self.running() {
             return None;
@@ -291,7 +291,7 @@ impl Bench {
         Some(steer)
     }
 
-    /// After each frame drawn, with the stars it drew.
+    /// Records each frame drawn and the stars it drew.
     pub fn on_frame(
         &mut self,
         now: Instant,
@@ -304,7 +304,8 @@ impl Bench {
         let in_phase = now - *self.since.get_or_insert(now);
         let measured = Frame {
             stars,
-            asked: self.params.count,
+            // Past the showcase's limit is not short of memory
+            asked: self.params.count.min(MAX_STARS),
             cpu: *cpu,
         };
         match self.phase {
@@ -357,7 +358,7 @@ impl Bench {
         }
     }
 
-    /// Each frame's GPU timings, as they arrive.
+    /// Takes each frame's GPU timings as they arrive.
     pub fn on_gpu(&mut self, times: &GpuTimes) {
         if matches!(self.phase, Phase::Measure | Phase::Playing)
             && times.frame >= self.measured_from
@@ -366,8 +367,8 @@ impl Bench {
         }
     }
 
-    /// Writes the summary and prints it, against another run's when there
-    /// is one.
+    /// Writes the summary and prints it against another run's when there is
+    /// one.
     pub fn finish(&mut self, setup: Setup) {
         let summary = Summary {
             name: self.name.clone(),
@@ -393,8 +394,8 @@ impl Bench {
         }
         print_summary(&summary);
 
-        // Unless told otherwise, a sweep is compared with `baseline` and a
-        // replay of `<recording>` with `baseline-<recording>`, once they exist
+        // By default a sweep is compared with `baseline` and a replay of
+        // `<recording>` with `baseline-<recording>` once they exist
         let (against, asked) = match (&self.against, &self.script) {
             (Some(name), _) => (name.clone(), true),
             (None, Script::Sweep) => ("baseline".to_owned(), false),
@@ -426,7 +427,7 @@ impl Bench {
         Next::Stars(self.params.count)
     }
 
-    /// A replay's frames, star count by star count, and all together.
+    /// Summarizes a replay's frames star count by star count and all together.
     fn summarise_replay(&mut self, period: Duration) {
         let mut counts: Vec<u32> = self.frames.iter().map(|f| f.stars).collect();
         counts.sort_unstable();
@@ -449,7 +450,7 @@ impl Bench {
     }
 }
 
-/// `--compare=<a>,<b>`: both runs, then how the second differs.
+/// Prints the two runs `--compare=<a>,<b>` names and how the second differs.
 pub fn compare(a: &str, b: &str) -> Result<(), Box<dyn Error>> {
     let (a, b) = (read(a)?, read(b)?);
     print_summary(&a);
