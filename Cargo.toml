@@ -6,7 +6,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-kurogane = { git = "https://github.com/0x48piraj/kurogane", tag = "v0.0.6-alpha.2" }
+kurogane = "=0.0.6-beta.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 winit = "0.30"
@@ -22,6 +22,6 @@ bytemuck = { version = "1", features = ["derive"] }
 glam = { version = "0.30", features = ["bytemuck"] }
 
 [build-dependencies]
-kurogane-build = { git = "https://github.com/0x48piraj/kurogane", tag = "v0.0.6-alpha.2" }
+kurogane-build = "=0.0.6-beta.1"
 
 [workspace]

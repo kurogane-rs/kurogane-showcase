@@ -470,7 +470,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -662,7 +662,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1209,8 +1209,9 @@ dependencies = [
 
 [[package]]
 name = "kurogane"
-version = "0.0.6-alpha.2"
-source = "git+https://github.com/0x48piraj/kurogane?tag=v0.0.6-alpha.2#50f20fc6e9862a86cbadb326426bdb1137579fd4"
+version = "0.0.6-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70a3f8d8bc5b68c90030881cfdc02c4f45e05918cfe4718c040eb7e56c5a309e"
 dependencies = [
  "ctrlc",
  "kurogane-layout",
@@ -1223,7 +1224,7 @@ dependencies = [
  "raw-window-handle",
  "serde",
  "serde_json",
- "tetsu",
+ "tanso",
  "tracing",
  "unicode-normalization",
  "url",
@@ -1233,16 +1234,18 @@ dependencies = [
 
 [[package]]
 name = "kurogane-build"
-version = "0.0.6-alpha.2"
-source = "git+https://github.com/0x48piraj/kurogane?tag=v0.0.6-alpha.2#50f20fc6e9862a86cbadb326426bdb1137579fd4"
+version = "0.0.6-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5331915ce6c0c4b602ce9aaf585d630c0277e101a326660cec0da8b1f4b42aa"
 dependencies = [
- "tetsu-build",
+ "tanso-build",
 ]
 
 [[package]]
 name = "kurogane-layout"
-version = "0.0.6-alpha.2"
-source = "git+https://github.com/0x48piraj/kurogane?tag=v0.0.6-alpha.2#50f20fc6e9862a86cbadb326426bdb1137579fd4"
+version = "0.0.6-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26fffe27319fab35c1c2195380970db61cdfe6a530d0738e39b26fa160fd2e28"
 dependencies = [
  "dirs",
  "thiserror 2.0.21",
@@ -2269,7 +2272,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2574,37 +2577,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "tanso"
+version = "154.5.0+154.0.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7155579453d057d2d1355cc229c854ad12875b80f3943772ff9c61ee0830953d"
+dependencies = [
+ "libloading 0.9.0",
+ "objc2 0.6.4",
+ "tanso-sys",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tanso-build"
+version = "154.5.0+154.0.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7141e36c724f782d7f39997c28ac2bd86845acce2a354114aa91ee12d768907"
+
+[[package]]
+name = "tanso-sys"
+version = "154.5.0+154.0.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8663e447e40a796f549e99e10e5f7ba556a2c9500009c59e6128e461eb965a07"
+dependencies = [
+ "dirs",
+ "libloading 0.9.0",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "tetsu"
-version = "154.4.0+154.0.33"
-source = "git+https://github.com/kurogane-rs/tetsu?tag=v154.4.0%2B154.0.33#881d8cbd1209aa0379c90f121a9f00aaefd026d2"
-dependencies = [
- "libloading 0.9.0",
- "objc2 0.6.4",
- "tetsu-sys",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "tetsu-build"
-version = "154.4.0+154.0.33"
-source = "git+https://github.com/kurogane-rs/tetsu?tag=v154.4.0%2B154.0.33#881d8cbd1209aa0379c90f121a9f00aaefd026d2"
-
-[[package]]
-name = "tetsu-sys"
-version = "154.4.0+154.0.33"
-source = "git+https://github.com/kurogane-rs/tetsu?tag=v154.4.0%2B154.0.33#881d8cbd1209aa0379c90f121a9f00aaefd026d2"
-dependencies = [
- "dirs",
- "libloading 0.9.0",
 ]
 
 [[package]]
@@ -3414,7 +3420,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
